@@ -1218,6 +1218,10 @@
 
         function showOnMap(licenseId) {
             highlightLicense(licenseId);
+
+            const marker = markersLayer.getLayers()[licenseId - 1];
+            marker.openPopup();
+            window.open("#map", "_self");
         }
 
         function showNotification(message, type = 'info') {
