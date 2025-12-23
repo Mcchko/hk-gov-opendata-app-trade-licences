@@ -743,7 +743,7 @@
                         map.setView([lat, lng], 15, { animate: true });
 
                         // 顯示詳細信息並滾動到對應位置
-                        highlightLicense(marker.id);
+                        highlightLicense(marker.options.id);
                     });
 
                     markersLayer.addLayer(marker);
