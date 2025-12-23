@@ -1,0 +1,1289 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>行業牌照查詢系統</title>
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+    <!-- Awesome Icon -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.1/css/all.min.css" />
+    <style>
+        .element-hidden {
+            display: none !important;
+        }
+
+        /* Reset & Base */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+            background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);
+            min-height: 100vh;
+            padding: 16px;
+            color: #1f2937;
+        }
+
+        /* Layout */
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            min-height: 100vh;
+        }
+
+        /* Header */
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 12px;
+            border-radius: 16px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(12px);
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .header h1 {
+            color: #111827;
+            font-size: 1.875rem;
+            font-weight: 700;
+            margin-bottom: 8px;
+            background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .header .subtitle {
+            color: #6b7280;
+            font-size: 1rem;
+            line-height: 1.5;
+        }
+
+        /* Main Content */
+        .main-content {
+            display: flex;
+            flex: 1;
+            gap: 20px;
+        }
+
+        .map-section {
+            flex: 0 0 60%;
+        }
+
+        .data-section {
+            flex: 0 0 40%;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 16px;
+            padding: 20px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            overflow-y: auto;
+            max-height: 73vh;
+        }
+
+        /* Map Section */
+        .map-container {
+            height: 73vh !important;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            position: relative;
+        }
+
+        #map {
+            height: 100%;
+            width: 100%;
+            border-radius: 16px;
+        }
+
+        /* Data Section Styles */
+        .data-header {
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .data-header h2 {
+            color: #111827;
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 8px;
+            background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .data-header .subtitle {
+            color: #6b7280;
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+
+        .data-stats {
+            display: flex;
+            justify-content: space-around;
+            background: #f8fafc;
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 20px;
+            border: 1px solid #e5e7eb;
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: #2563eb;
+            display: block;
+        }
+
+        .stat-label {
+            font-size: 0.8rem;
+            color: #6b7280;
+        }
+
+        .accordion-container {
+            margin-top: 20px;
+        }
+
+        .facility-item {
+            background: #f9fafb;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            margin-bottom: 12px;
+            overflow: hidden;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .facility-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .facility-header {
+            background: #3b82f6;
+            color: white;
+            padding: 12px 15px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: 600;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .facility-header.active {
+            background: #1d4ed8;
+            color: white;
+        }
+
+        .facility-header i {
+            transition: transform 0.3s ease;
+        }
+
+        .facility-header.collapsed i {
+            transform: rotate(-90deg);
+        }
+
+        .facility-content {
+            padding: 15px;
+            background: white;
+            border-top: 1px solid #e5e7eb;
+        }
+
+        .info-row {
+            display: flex;
+            margin-bottom: 10px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #f3f4f6;
+        }
+
+        .info-label {
+            font-weight: 600;
+            color: #374151;
+            width: 150px;
+            flex-shrink: 0;
+        }
+
+        .info-value {
+            flex: 1;
+            color: #6b7280;
+            word-break: break-word;
+        }
+
+        .info-value a {
+            color: #2563eb;
+            text-decoration: none;
+        }
+
+        .info-value a:hover {
+            text-decoration: underline;
+        }
+
+        .no-data {
+            text-align: center;
+            padding: 40px 20px;
+            color: #9ca3af;
+        }
+
+        .no-data i {
+            font-size: 3rem;
+            margin-bottom: 15px;
+            opacity: 0.5;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px 20px;
+            color: #6b7280;
+        }
+
+        .loading-spinner {
+            border: 3px solid #f3f4f6;
+            border-top: 3px solid #2563eb;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* License specific styles */
+        .license-icon {
+            color: #2563eb;
+            margin-right: 8px;
+        }
+
+        .type-badge {
+            background: #10b981;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin-left: 8px;
+        }
+
+        .type-badge.active {
+            background: #047857 !important;
+            color: white !important;
+        }
+
+        /* Marker styles */
+        .license-marker {
+            background: #2563eb;
+            border: 2px solid white;
+            border-radius: 50%;
+            width: 16px;
+            height: 16px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        .license-marker.selected {
+            background: #dc2626;
+            width: 20px;
+            height: 20px;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% {
+                box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.4);
+            }
+
+            70% {
+                box-shadow: 0 0 0 10px rgba(220, 38, 38, 0);
+            }
+
+            100% {
+                box-shadow: 0 0 0 0 rgba(220, 38, 38, 0);
+            }
+        }
+
+        /* Group styles */
+        .category-group {
+            margin-bottom: 16px;
+        }
+
+        .category-header {
+            background: #1d4ed8 !important;
+            color: white !important;
+            border-radius: 8px 8px 0 0;
+        }
+
+        .category-content {
+            background: #f8fafc;
+            padding: 10px;
+            border-radius: 0 0 8px 8px;
+            border: 1px solid #e5e7eb;
+            border-top: none;
+        }
+
+        .category-header:hover {
+            background: #1e40af !important;
+        }
+
+        .license-group {
+            margin-left: 10px;
+            margin-bottom: 10px;
+        }
+
+        .license-header {
+            background: #3b82f6 !important;
+            color: white !important;
+        }
+
+        .license-header:hover {
+            background: #2563eb !important;
+        }
+
+        .district-group {
+            margin-left: 20px;
+            margin-bottom: 8px;
+            margin-top: 8px;
+        }
+
+        .district-header {
+            background: #60a5fa !important;
+            color: white !important;
+        }
+
+        .district-header:hover {
+            background: #3b82f6 !important;
+        }
+
+        /* Footer */
+        .footer {
+            text-align: center;
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 0.875rem;
+            padding: 20px;
+            margin-top: auto;
+        }
+
+        /* Search Bar */
+        .search-container {
+            margin-bottom: 20px;
+        }
+
+        .search-box {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border-color 0.3s ease;
+        }
+
+        .search-box:focus {
+            outline: none;
+            border-color: #2563eb;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+
+        /* Filter Buttons */
+        .filter-buttons {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+
+        .filter-btn {
+            padding: 6px 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 20px;
+            background: white;
+            color: #4b5563;
+            font-size: 0.875rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .filter-btn:hover {
+            background: #f3f4f6;
+        }
+
+        .filter-btn.active {
+            background: #2563eb;
+            color: white;
+            border-color: #2563eb;
+        }
+
+        /* Mobile Optimizations */
+        @media (max-width: 768px) {
+            body {
+                padding: 12px;
+                background: #1e3a8a;
+            }
+
+            .container {
+                gap: 16px;
+            }
+
+            .header {
+                padding: 16px;
+                border-radius: 12px;
+            }
+
+            .header h1 {
+                font-size: 1.5rem;
+            }
+
+            .main-content {
+                flex-direction: column;
+            }
+
+            .map-section,
+            .data-section {
+                flex: 1 1 100%;
+                width: 100%;
+            }
+
+            .map-container {
+                height: 400px;
+                border-radius: 12px;
+            }
+
+            .data-section {
+                max-height: 400px;
+                padding: 15px;
+            }
+
+            .data-header h2 {
+                font-size: 1.3rem;
+            }
+
+            .stat-value {
+                font-size: 1.5rem;
+            }
+
+            .info-row {
+                flex-direction: column;
+                margin-bottom: 15px;
+            }
+
+            .info-label {
+                width: 100%;
+                margin-bottom: 5px;
+            }
+
+            .facility-header {
+                padding: 10px 12px;
+                font-size: 0.9rem;
+            }
+        }
+
+        /* Desktop Enhancements */
+        @media (min-width: 1200px) {
+            .map-container {
+                height: 600px;
+            }
+        }
+
+        /* Leaflet Customizations */
+        .leaflet-control-layers {
+            border-radius: 8px !important;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
+        }
+
+        /* Smooth Transitions */
+        * {
+            transition: all 0.3s ease;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <header class="header">
+            <h1>行業牌照查詢系統</h1>
+            <p class="subtitle">香港食物環境衞生署行業牌照位置及詳細資訊</p>
+        </header>
+        <main class="main-content">
+            <section class="data-section">
+                <div class="data-header">
+                    <h2>牌照列表</h2>
+                    <p class="subtitle">點擊牌照名稱查看更多詳細資訊</p>
+                </div>
+                <div class="data-stats">
+                    <div class="stat-item">
+                        <span id="total-licenses" class="stat-value">0</span>
+                        <span class="stat-label">牌照總數</span>
+                    </div>
+                    <div class="stat-item">
+                        <span id="total-districts" class="stat-value">0</span>
+                        <span class="stat-label">地區數目</span>
+                    </div>
+                    <div class="stat-item">
+                        <span id="total-categories" class="stat-value">0</span>
+                        <span class="stat-label">牌照種類</span>
+                    </div>
+                </div>
+
+                <div class="search-container">
+                    <input type="text" id="search-input" class="search-box" placeholder="搜尋牌照名稱、地址或地區..."
+                        onkeyup="filterLicenses()">
+                </div>
+
+                <div class="filter-buttons" id="district-filters"></div>
+
+                <div class="accordion-container" id="accordion-container">
+                    <div class="loading">
+                        <div class="loading-spinner"></div>
+                        <p>正在加載牌照資料...</p>
+                    </div>
+                </div>
+            </section>
+            <section class="map-section">
+                <div class="map-container">
+                    <div id="map"></div>
+                </div>
+            </section>
+        </main>
+        <footer class="footer">
+            <p>「行業牌照」查詢系統 | 資料來源: 香港政府地理數據平台 | 最後更新: <span id="last-update">--</span></p>
+        </footer>
+    </div>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <script>
+        // 定義數據源 - FEHD行業牌照資料
+        const DATA_SOURCE_URL = 'https://portal.csdi.gov.hk/server/services/common/fehd_rcd_1630036520303_61763/MapServer/WFSServer?service=wfs&request=GetFeature&typenames=FEHD_TL&outputFormat=geojson';
+
+        // 全局變量
+        let map;
+        let allLicenses = [];
+        let markersLayer = L.layerGroup();
+        let selectedMarker = null;
+        let totalLicenses = 0;
+        let totalDistricts = 0;
+        let totalCategories = 0;
+        let lastUpdateDate = '--';
+
+        // 初始化地圖配置 - 以香港為中心
+        const MAP_CONFIG = {
+            center: [22.3193, 114.1694], // 香港中心點
+            zoom: 12
+        };
+
+        // 初始化應用
+        document.addEventListener('DOMContentLoaded', function () {
+            initMap();
+            loadLicenseData();
+        });
+
+        function initMap() {
+            // 初始化地圖
+            map = L.map('map', {
+                zoomControl: true,
+                attributionControl: true
+            }).setView(MAP_CONFIG.center, MAP_CONFIG.zoom);
+
+            // 添加地圖圖層
+            const tileLayers = {
+                "開放街道地圖": L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '© OpenStreetMap',
+                    maxZoom: 19,
+                    subdomains: ['a', 'b', 'c']
+                }),
+                "衛星圖像": L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+                    attribution: '© Esri',
+                    maxZoom: 19
+                }),
+                "地形圖": L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+                    attribution: '© OpenTopoMap',
+                    maxZoom: 17
+                })
+            };
+
+            tileLayers["開放街道地圖"].addTo(map);
+
+            // 添加圖層控制
+            L.control.layers(tileLayers, null, {
+                // collapsed: true,
+                position: 'topright'
+            }).addTo(map);
+
+            // 添加標記圖層
+            markersLayer.addTo(map);
+        }
+
+        async function loadLicenseData() {
+            try {
+                const response = await fetch(DATA_SOURCE_URL);
+                const data = await response.json();
+
+                if (data.features && data.features.length > 0) {
+                    allLicenses = data.features;
+                    createMarkers(allLicenses);
+                    updateStatistics();
+                    updateFilters();
+                    updateLicensesList(allLicenses);
+
+                    // 更新最後更新日期
+                    if (allLicenses.length > 0 && allLicenses[0].properties.LASTUPDATE) {
+                        lastUpdateDate = allLicenses[0].properties.LASTUPDATE;
+                        document.getElementById('last-update').textContent = lastUpdateDate;
+                    }
+
+                    // 自動調整地圖視圖以顯示所有牌照
+                    const bounds = calculateAllMarkersBounds();
+                    if (bounds) {
+                        map.fitBounds(bounds, { padding: [50, 50] });
+                    }
+
+                    showNotification(`成功加載 ${allLicenses.length} 個牌照資料`, 'success');
+                } else {
+                    document.getElementById('accordion-container').innerHTML =
+                        '<div class="no-data"><i class="fas fa-exclamation-triangle"></i><p>未找到牌照資料</p></div>';
+                }
+            } catch (error) {
+                console.error('加載數據時出錯:', error);
+                document.getElementById('accordion-container').innerHTML =
+                    '<div class="no-data"><i class="fas fa-exclamation-triangle"></i><p>加載數據時出錯</p></div>';
+                showNotification('加載數據時出錯，請稍後再試', 'error');
+            }
+        }
+
+        function calculateAllMarkersBounds() {
+            let bounds = null;
+            markersLayer.eachLayer(function (layer) {
+                if (layer.getLatLng) {
+                    const latLng = layer.getLatLng();
+                    if (bounds) {
+                        bounds.extend(latLng);
+                    } else {
+                        bounds = L.latLngBounds([latLng, latLng]);
+                    }
+                }
+            });
+            return bounds;
+        }
+
+        function createMarkers(licenses) {
+            markersLayer.clearLayers();
+
+            licenses.forEach(feature => {
+                const properties = feature.properties;
+                const geometry = feature.geometry;
+
+                if (geometry && geometry.type === 'Point') {
+                    const [lng, lat] = geometry.coordinates;
+
+                    // 創建自定義標記
+                    const markerIcon = L.divIcon({
+                        className: 'license-marker',
+                        html: '<i class="fas fa-certificate"></i>',
+                        iconSize: [30, 30],
+                        iconAnchor: [15, 30],
+                        popupAnchor: [0, -30]
+                    });
+
+                    const marker = L.marker([lat, lng], {
+                        icon: markerIcon,
+                        id: properties.OBJECTID || Math.random()
+                    });
+
+                    marker.properties = properties;
+                    marker.bindPopup(createPopupContent(properties, lat, lng));
+
+                    // 點擊事件
+                    marker.on('click', function () {
+                        if (selectedMarker) {
+                            selectedMarker.setIcon(L.divIcon({
+                                className: 'license-marker',
+                                html: '<i class="fas fa-certificate"></i>',
+                                iconSize: [30, 30],
+                                iconAnchor: [15, 30],
+                                popupAnchor: [0, -30]
+                            }));
+                        }
+
+                        // 設置當前選中的標記樣式
+                        marker.setIcon(L.divIcon({
+                            className: 'license-marker selected',
+                            html: '<i class="fas fa-certificate"></i>',
+                            iconSize: [35, 35],
+                            iconAnchor: [17.5, 35],
+                            popupAnchor: [0, -35]
+                        }));
+                        selectedMarker = marker;
+
+                        // 打開彈出視窗
+                        marker.openPopup();
+
+                        // 調整地圖視圖到標記位置
+                        map.setView([lat, lng], 15, { animate: true });
+
+                        // 顯示詳細信息並滾動到對應位置
+                        highlightLicense(marker.id);
+                    });
+
+                    markersLayer.addLayer(marker);
+                }
+            });
+        }
+
+        function createPopupContent(properties, lat, lng) {
+            const nameTc = properties.NAME_TC || properties.NAME_EN || '未命名';
+            const addressTc = properties.ADDRESS_TC || properties.ADDRESS_EN || '未提供地址';
+            const categoryTc = properties.DATASET_TC || properties.DATASET_EN || '未分類';
+            const districtTc = properties.SEARCH01_TC || properties.SEARCH01_EN || '未提供地區';
+            const coordinates = lat && lng ? `${lat.toFixed(6)}, ${lng.toFixed(6)}` : '未提供';
+
+            return `
+        <div style="max-width: 300px; padding: 10px;">
+            <h3 style="margin: 0 0 10px 0; color: #1d4ed8;">
+                ${nameTc}
+            </h3>
+            <p style="margin: 5px 0;"><strong>牌照類別:</strong> ${categoryTc}</p>
+            <p style="margin: 5px 0;"><strong>地區:</strong> ${districtTc}</p>
+            <p style="margin: 5px 0;"><strong>地址:</strong><br/>${addressTc}</p>
+            <p style="margin: 5px 0;"><strong>坐標:</strong> ${coordinates}</p>
+            ${properties.NSEARCH05_TC ? `<p style="margin: 5px 0;"><strong>有效日期:</strong> ${properties.NSEARCH05_TC}</p>` : ''}
+        </div>
+    `;
+        }
+
+        function updateStatistics() {
+            totalLicenses = allLicenses.length;
+
+            // 統計地區數目
+            const districts = new Set();
+            allLicenses.forEach(license => {
+                const district = license.properties.SEARCH01_TC || license.properties.SEARCH01_EN;
+                if (district) districts.add(district);
+            });
+            totalDistricts = districts.size;
+
+            // 統計牌照種類數目
+            const categories = new Set();
+            allLicenses.forEach(license => {
+                const category = license.properties.DATASET_TC || license.properties.DATASET_EN;
+                if (category) categories.add(category);
+            });
+            totalCategories = categories.size;
+
+            document.getElementById('total-licenses').textContent = totalLicenses;
+            document.getElementById('total-districts').textContent = totalDistricts;
+            document.getElementById('total-categories').textContent = totalCategories;
+        }
+
+        function updateFilters() {
+            const districts = new Set();
+            allLicenses.forEach(license => {
+                const district = license.properties.SEARCH01_TC || license.properties.SEARCH01_EN;
+                if (district) districts.add(district);
+            });
+
+            const filterContainer = document.getElementById('district-filters');
+            let filterHTML = '<button class="filter-btn active" onclick="filterByDistrict(\'all\')">全部地區</button>';
+
+            Array.from(districts).sort().forEach(district => {
+                filterHTML += `<button class="filter-btn" onclick="filterByDistrict('${district}')">${district}</button>`;
+            });
+
+            filterContainer.innerHTML = filterHTML;
+        }
+
+        function filterByDistrict(district) {
+            // 更新按鈕狀態
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+
+            if (district === 'all') {
+                updateLicensesList(allLicenses);
+                createMarkers(allLicenses);
+            } else {
+                const filteredLicenses = allLicenses.filter(license => {
+                    const licenseDistrict = license.properties.SEARCH01_TC || license.properties.SEARCH01_EN;
+                    return licenseDistrict === district;
+                });
+
+                updateLicensesList(filteredLicenses);
+                createMarkers(filteredLicenses);
+            }
+
+            // 重置統計數據顯示
+            document.getElementById('total-licenses').textContent = totalLicenses;
+            document.getElementById('total-districts').textContent = totalDistricts;
+            document.getElementById('total-categories').textContent = totalCategories;
+        }
+
+        function filterLicenses() {
+            const searchTerm = document.getElementById('search-input').value.toLowerCase();
+
+            if (!searchTerm) {
+                updateLicensesList(allLicenses);
+                return;
+            }
+
+            const filteredLicenses = allLicenses.filter(license => {
+                const props = license.properties;
+                const searchFields = [
+                    props.NAME_TC,
+                    props.NAME_EN,
+                    props.ADDRESS_TC,
+                    props.ADDRESS_EN,
+                    props.SEARCH01_TC,
+                    props.SEARCH01_EN,
+                    props.DATASET_TC,
+                    props.DATASET_EN
+                ];
+
+                return searchFields.some(field =>
+                    field && field.toString().toLowerCase().includes(searchTerm)
+                );
+            });
+
+            updateLicensesList(filteredLicenses);
+        }
+
+        function updateLicensesList(licenses) {
+            const container = document.getElementById('accordion-container');
+
+            if (licenses.length === 0) {
+                container.innerHTML = '<div class="no-data"><i class="fas fa-search"></i><p>未找到符合條件的牌照資料</p></div>';
+                return;
+            }
+
+            // 按DATASET_TC（牌照類別）分組
+            const groupedByCategory = {};
+            licenses.forEach(feature => {
+                const properties = feature.properties;
+                const category = properties.DATASET_TC || properties.DATASET_EN || '未分類';
+
+                if (!groupedByCategory[category]) {
+                    groupedByCategory[category] = [];
+                }
+
+                groupedByCategory[category].push({
+                    feature: feature,
+                    properties: properties,
+                    id: properties.OBJECTID || Math.random(),
+                    nameTc: properties.NAME_TC || properties.NAME_EN || '未命名',
+                    addressTc: properties.ADDRESS_TC || properties.ADDRESS_EN || '未提供地址',
+                    districtTc: properties.SEARCH01_TC || properties.SEARCH01_EN || '未提供地區',
+                    datasetTc: category
+                });
+            });
+
+            // 對牌照類別進行排序
+            const sortedCategories = Object.keys(groupedByCategory).sort();
+
+            // 生成手風琴HTML - 按牌照類別分組
+            let accordionHTML = '';
+            sortedCategories.forEach((category, categoryIndex) => {
+                const licensesInCategory = groupedByCategory[category];
+
+                // 在每個牌照類別內，按牌照名稱分組
+                const groupedByName = {};
+                licensesInCategory.forEach(license => {
+                    const name = license.nameTc;
+                    if (!groupedByName[name]) {
+                        groupedByName[name] = [];
+                    }
+                    groupedByName[name].push(license);
+                });
+
+                const names = Object.keys(groupedByName).sort();
+
+                accordionHTML += `
+            <div class="category-group" data-category="${category}">
+                <div class="facility-item">
+                    <div class="facility-header category-header" onclick="toggleCategoryGroup('${category}')">
+                        <div>
+                            <i class="fas fa-folder-open" style="margin-right: 8px;"></i>
+                            <span>${categoryIndex + 1}. ${category} (${licensesInCategory.length}個牌照)</span>
+                        </div>
+                        <i class="fas fa-chevron-down"></i>
+                    </div>
+                    <div id="category-${category}" class="category-content" style="display:none">
+        `;
+
+                names.forEach((name, nameIndex) => {
+                    const licensesOfName = groupedByName[name];
+
+                    // 在每個牌照名稱內，按地區分組
+                    const groupedByDistrict = {};
+                    licensesOfName.forEach(license => {
+                        const district = license.districtTc;
+                        if (!groupedByDistrict[district]) {
+                            groupedByDistrict[district] = [];
+                        }
+                        groupedByDistrict[district].push(license);
+                    });
+
+                    const districts = Object.keys(groupedByDistrict).sort();
+
+                    accordionHTML += `
+                <div class="license-group" data-name="${name}">
+                    <div class="facility-item">
+                        <div class="facility-header license-header" onclick="toggleLicenseGroup('${category}-${name}')">
+                            <div>
+                                <i class="fas fa-file-alt" style="margin-right: 8px;"></i>
+                                <span>${nameIndex + 1}. ${name} (${licensesOfName.length}個)</span>
+                            </div>
+                            <i class="fas fa-chevron-down"></i>
+                        </div>
+                        <div id="license-${category}-${name}" class="facility-content" style="display: none; padding: 10px;">
+            `;
+
+                    districts.forEach((district, districtIndex) => {
+                        const licensesInDistrict = groupedByDistrict[district];
+
+                        accordionHTML += `
+                    <div class="district-group" data-district="${district}">
+                        <div class="facility-item">
+                            <div class="facility-header district-header" onclick="toggleDistrictGroup('${category}-${name}-${district}')">
+                                <div>
+                                    <i class="fas fa-map-marker-alt" style="margin-right: 8px;"></i>
+                                    <span>${districtIndex + 1}. ${district} (${licensesInDistrict.length}個)</span>
+                                </div>
+                                <i class="fas fa-chevron-down"></i>
+                            </div>
+                            <div id="district-${category}-${name}-${district}" class="facility-content" style="display: none; padding: 10px;">
+                `;
+
+                        licensesInDistrict.forEach((license, licenseIndex) => {
+                            const properties = license.properties;
+                            const geometry = license.feature.geometry;
+
+                            // 獲取坐標
+                            let lat = null;
+                            let lng = null;
+                            if (geometry && geometry.type === 'Point') {
+                                [lng, lat] = geometry.coordinates;
+                            }
+
+                            const coordinates = lat && lng ? `${lat.toFixed(6)}, ${lng.toFixed(6)}` : '未提供';
+                            const licenseNumber = properties.SEARCH02_TC || properties.SEARCH02_EN || '未提供';
+                            const expiryDate = properties.NSEARCH05_TC || properties.NSEARCH05_EN || '未提供';
+
+                            accordionHTML += `
+                        <div class="facility-item" id="license-item-${license.id}" style="margin-left: 10px; margin-top: 8px;">
+                            <div class="facility-header" onclick="toggleLicenseItem(${license.id})">
+                                <div>
+                                    <i class="fas fa-certificate license-icon"></i>
+                                    <span>牌照 ${licenseIndex + 1}</span>
+                                    <span class="type-badge">${licenseNumber}</span>
+                                </div>
+                                <i class="fas fa-chevron-down"></i>
+                            </div>
+                            <div id="content-${license.id}" class="facility-content" style="display: none;">
+                                <div class="info-row">
+                                    <div class="info-label">牌照編號</div>
+                                    <div class="info-value">${licenseNumber}</div>
+                                </div>
+                                <div class="info-row">
+                                    <div class="info-label">牌照名稱</div>
+                                    <div class="info-value">${license.nameTc}</div>
+                                </div>
+                                <div class="info-row">
+                                    <div class="info-label">牌照類別</div>
+                                    <div class="info-value">${license.datasetTc}</div>
+                                </div>
+                                <div class="info-row">
+                                    <div class="info-label">地區</div>
+                                    <div class="info-value">${license.districtTc}</div>
+                                </div>
+                                <div class="info-row">
+                                    <div class="info-label">地址</div>
+                                    <div class="info-value">${license.addressTc}</div>
+                                </div>
+                                <div class="info-row">
+                                    <div class="info-label">有效日期</div>
+                                    <div class="info-value">${expiryDate}</div>
+                                </div>
+                                <div class="info-row">
+                                    <div class="info-label">坐標</div>
+                                    <div class="info-value">${coordinates}</div>
+                                </div>
+                                <div class="info-row">
+                                    <div class="info-label">操作</div>
+                                    <div class="info-value">
+                                        <button onclick="showOnMap(${license.id})" style="background: #2563eb; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer;">
+                                            <i class="fas fa-map-marker-alt"></i> 在地圖顯示
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                        });
+
+                        accordionHTML += `
+                            </div>
+                        </div>
+                    </div>
+                `;
+                    });
+
+                    accordionHTML += `
+                        </div>
+                    </div>
+                </div>
+            `;
+                });
+
+                accordionHTML += `
+                    </div>
+                </div>
+            </div>
+        `;
+            });
+
+            container.innerHTML = accordionHTML;
+        }
+
+        function toggleCategoryGroup(categoryId) {
+            const categoryContent = document.getElementById(`category-${categoryId}`);
+            const header = categoryContent.previousElementSibling;
+            const icon = header.querySelector('.fa-chevron-down, .fa-chevron-up');
+            if (categoryContent.style.display === 'none') {
+                categoryContent.style.display = 'block';
+                icon.className = 'fas fa-chevron-up';
+            } else {
+                categoryContent.style.display = 'none';
+                icon.className = 'fas fa-chevron-down';
+            }
+        }
+
+        function toggleLicenseGroup(licenseId) {
+            const licenseContent = document.getElementById(`license-${licenseId}`);
+            const header = licenseContent.previousElementSibling;
+            const icon = header.querySelector('.fa-chevron-down, .fa-chevron-up');
+            if (licenseContent.style.display === 'none') {
+                licenseContent.style.display = 'block';
+                icon.className = 'fas fa-chevron-up';
+            } else {
+                licenseContent.style.display = 'none';
+                icon.className = 'fas fa-chevron-down';
+            }
+        }
+
+        function toggleDistrictGroup(districtId) {
+            const districtContent = document.getElementById(`district-${districtId}`);
+            const header = districtContent.previousElementSibling;
+            const icon = header.querySelector('.fa-chevron-down, .fa-chevron-up');
+            if (districtContent.style.display === 'none') {
+                districtContent.style.display = 'block';
+                icon.className = 'fas fa-chevron-up';
+            } else {
+                districtContent.style.display = 'none';
+                icon.className = 'fas fa-chevron-down';
+            }
+        }
+
+        function toggleLicenseItem(id) {
+            const content = document.getElementById(`content-${id}`);
+            const header = content.previousElementSibling;
+            const icon = header.querySelector('.fa-chevron-down, .fa-chevron-up');
+            if (content.style.display === 'none') {
+                header.classList.add("active");
+                header.querySelector(".type-badge")?.classList.add("active");
+                content.style.display = 'block';
+                icon.className = 'fas fa-chevron-up';
+            } else {
+                header.classList.remove("active");
+                header.querySelector(".type-badge")?.classList.remove("active");
+                content.style.display = 'none';
+                icon.className = 'fas fa-chevron-down';
+            }
+        }
+
+        function highlightLicense(licenseId) {
+            // 滾動到對應的牌照
+            const licenseElement = document.getElementById(`license-item-${licenseId}`);
+            if (licenseElement) {
+                // 先展開所有上層容器
+                expandAllParentContainers(licenseElement);
+
+                // 滾動到元素
+                licenseElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+                // 展開該牌照的詳細信息
+                const content = document.getElementById(`content-${licenseId}`);
+                const header = content.previousElementSibling;
+                const icon = header.querySelector('.fa-chevron-down');
+                if (content.style.display === 'none') {
+                    content.style.display = 'block';
+                    if (icon) icon.className = 'fas fa-chevron-up';
+                }
+
+                // 高亮顯示列表項目
+                licenseElement.style.boxShadow = '0 0 0 2px #2563eb';
+                licenseElement.style.transition = 'box-shadow 0.3s ease';
+                setTimeout(() => {
+                    licenseElement.style.boxShadow = '';
+                }, 2000);
+            }
+
+            // 在地圖上高亮對應的標記
+            markersLayer.eachLayer(layer => {
+                if (layer.id === licenseId) {
+                    if (selectedMarker && selectedMarker !== layer) {
+                        selectedMarker.setIcon(L.divIcon({
+                            className: 'license-marker',
+                            html: '<i class="fas fa-certificate"></i>',
+                            iconSize: [30, 30],
+                            iconAnchor: [15, 30],
+                            popupAnchor: [0, -30]
+                        }));
+                    }
+                    layer.setIcon(L.divIcon({
+                        className: 'license-marker selected',
+                        html: '<i class="fas fa-certificate"></i>',
+                        iconSize: [35, 35],
+                        iconAnchor: [17.5, 35],
+                        popupAnchor: [0, -35]
+                    }));
+                    selectedMarker = layer;
+
+                    // 打開彈出視窗
+                    layer.openPopup();
+
+                    // 調整地圖視圖
+                    const latLng = layer.getLatLng();
+                    map.setView([latLng.lat, latLng.lng], 15, { animate: true });
+                }
+            });
+        }
+
+        function expandAllParentContainers(element) {
+            // 展開所有父級容器（類別、名稱和地區分組）
+            let currentElement = element.parentElement;
+            while (currentElement) {
+                if (currentElement.classList.contains('category-content')) {
+                    const categoryId = currentElement.id.replace('category-', '');
+                    const categoryHeader = currentElement.previousElementSibling;
+                    const categoryIcon = categoryHeader.querySelector('.fa-chevron-down, .fa-chevron-up');
+                    if (currentElement.style.display === 'none') {
+                        currentElement.style.display = 'block';
+                        if (categoryIcon) categoryIcon.className = 'fas fa-chevron-up';
+                    }
+                }
+                if (currentElement.classList.contains('facility-content') && currentElement.id.startsWith('license-')) {
+                    const licenseHeader = currentElement.previousElementSibling;
+                    const licenseIcon = licenseHeader.querySelector('.fa-chevron-down, .fa-chevron-up');
+                    if (currentElement.style.display === 'none') {
+                        currentElement.style.display = 'block';
+                        if (licenseIcon) licenseIcon.className = 'fas fa-chevron-up';
+                    }
+                }
+                if (currentElement.classList.contains('facility-content') && currentElement.id.startsWith('district-')) {
+                    const districtHeader = currentElement.previousElementSibling;
+                    const districtIcon = districtHeader.querySelector('.fa-chevron-down, .fa-chevron-up');
+                    if (currentElement.style.display === 'none') {
+                        currentElement.style.display = 'block';
+                        if (districtIcon) districtIcon.className = 'fas fa-chevron-up';
+                    }
+                }
+                currentElement = currentElement.parentElement;
+                // Stop if we reach the accordion container
+                if (currentElement && currentElement.id === 'accordion-container') {
+                    break;
+                }
+            }
+        }
+
+        function showOnMap(licenseId) {
+            highlightLicense(licenseId);
+        }
+
+        function showNotification(message, type = 'info') {
+            // 移除現有通知
+            const existingNotification = document.querySelector('.notification');
+            if (existingNotification) {
+                existingNotification.remove();
+            }
+
+            // 創建通知元素
+            const notification = document.createElement('div');
+            notification.className = `notification ${type}`;
+            notification.innerHTML = `
+                <i class="fas fa-${type === 'success' ? 'check-circle' : 'info-circle'}"></i>
+                <span>${message}</span>
+            `;
+
+            // 設定通知樣式
+            Object.assign(notification.style, {
+                position: 'fixed',
+                bottom: '20px',
+                right: '20px',
+                backgroundColor: type === 'success' ? '#10b981' : '#3b82f6',
+                color: 'white',
+                padding: '12px 20px',
+                borderRadius: '8px',
+                boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px',
+                zIndex: '3000',
+                animation: 'slideIn 0.3s ease-out'
+            });
+
+            // 添加到文檔
+            document.body.appendChild(notification);
+
+            // 添加CSS動畫
+            const style = document.createElement('style');
+            style.textContent = `
+                @keyframes slideIn {
+                    from { transform: translateX(100%); opacity: 0; }
+                    to { transform: translateX(0); opacity: 1; }
+                }
+                @keyframes slideOut {
+                    from { transform: translateX(0); opacity: 1; }
+                    to { transform: translateX(100%); opacity: 0; }
+                }
+            `;
+            document.head.appendChild(style);
+
+            // 3秒後移除
+            setTimeout(() => {
+                notification.style.animation = 'slideOut 0.3s ease-out';
+                setTimeout(() => notification.remove(), 300);
+            }, 3000);
+        }
+
+        // 首次加載顯示教程
+        if (!localStorage.getItem('licenseTutorialShown')) {
+            setTimeout(() => {
+                alert("歡迎使用行業牌照查詢系統！\n\n• 點擊地圖上的牌照標記可查看詳細資訊\n• 點擊列表中的牌照名稱可展開/收起詳細資訊\n• 牌照按類別分組顯示\n• 可使用左上角圖層控制切換地圖樣式\n• 使用搜尋框快速查找牌照");
+                localStorage.setItem('licenseTutorialShown', 'true');
+            }, 1000);
+        }
+    </script>
+</body>
+
+</html>
